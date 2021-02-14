@@ -20,7 +20,7 @@ public class HistoryFileHandler {
     private static final String HISTORY_FILE_COULD_NOT_CREATE = "File of history payments could not be created.";
     private static final String HISTORY_FILE_COULD_NOT_CLOSE = "File of history payments could not be closed.";
     private static final String PROBLEM_WRITING_TO_HISTORY_FILE = "Problem while trying to write in the history file.";
-    private final static String HISTORY_FILES_DIRECTORY_PATH = "resources" + File.separator;
+    private static final String HISTORY_FILES_DIRECTORY_PATH = "resources" + File.separator;
     private static final String HISTORY_FILE_SUFFIX_NAME = "-history.txt";
 
 

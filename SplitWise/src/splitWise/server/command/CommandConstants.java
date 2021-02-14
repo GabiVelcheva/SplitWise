@@ -18,15 +18,22 @@ public class CommandConstants {
     static final String UNKNOWN_COMMAND = "[ Unknown command ]";
 
     static final String ALREADY_TAKEN_USERNAME = " is already taken, select another one ]";
+    static final String ADDING_YOURSELF = "You can't add yourself as friend.";
+    static final String ADDING_YOURSELF_GROUP = "You don't need to add yourself in the list of group members";
+    static final String APPROVED = "  approved your payment ";
     static final String CREATED_SUCCESSFULLY = " is created successfully ]";
     static final String DISCONNECTED = "[ Disconnected from server ]";
+    static final String DOESNT_OWE_YOU  = " doesn't owe you money ]";
+    static final String DOESNT_OWE_YOU_SO_MUCH  = " doesn't owe you so much money ]";
     static final String GROUP = "[ group: ";
     static final String INVALID_USERNAME_PASSWORD = "[ Invalid username/password combination ]";
     static final String SUCCESSFULLY_LOGGED_OUT = "[ Successfully logged out ]";
     static final String LOGGED_IN_ALREADY_AS = "[ You are logged in already as ";
+    static final String NO_STATUS = "No status to show";
     static final String NOT_LOGGED_IN = "[ You are not logged in ]";
     static final String NOT_REGISTERED_USER = "[ This user is not registered ]";
     static final String OPENING_BRACKET = "[ ";
+    static final String PAYED_YOU = " payed you ";
     static final String USER_ALREADY_FRIEND = "[ This user is already in you friend list ]";
     static final String FRIEND_ADDED = "added successfully as a friend ]";
     static final String GROUP_EXISTS = "[ A group with the same name and participants already exists ]";
@@ -39,9 +46,9 @@ public class CommandConstants {
     static final String SUCCESSFULLY_REGISTERED = " successfully registered ]";
     static final String SUCCESSFULLY_LOGGED_IN = " successfully logged in ]";
     static final String SOMEONE = "[ Someone";
-    static final String SPLITTED = "Splitted ";
+    static final String SPLIT = "Have split ";
     static final String BETWEEN_YOU = "between you and ";
-    static final String GROUP_MEMBERS = "the gorup members of ";
+    static final String GROUP_MEMBERS = "the group members of ";
     static final String USER = "[ User ";
     static final String USERNAME = "[ Username ";
     static final String USER_NOT_FRIEND_FIRST = "[ This user: ";

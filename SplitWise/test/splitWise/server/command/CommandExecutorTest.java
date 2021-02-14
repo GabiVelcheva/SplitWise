@@ -7,11 +7,12 @@ import org.junit.Test;
 import splitWise.server.SplitWiseServer;
 
 import static org.junit.Assert.assertEquals;
+import static splitWise.server.command.CommandConstants.ADDING_YOURSELF_GROUP;
 import static splitWise.server.command.CommandConstants.BETWEEN_YOU;
 import static splitWise.server.command.CommandConstants.FRIEND_TOTALS_COMMAND;
 import static splitWise.server.command.CommandConstants.GROUP_MEMBERS;
 import static splitWise.server.command.CommandConstants.GROUP_TOTALS_COMMAND;
-import static splitWise.server.command.CommandConstants.SPLITTED;
+import static splitWise.server.command.CommandConstants.SPLIT;
 import static splitWise.server.command.CommandConstants.SPLIT_ARGUMENTS_MESSAGE;
 
 import java.io.BufferedReader;
@@ -22,7 +23,6 @@ import java.net.Socket;
 
 public class CommandExecutorTest {
     private static final String REGISTER_COMMAND = "register";
-    private static final String DISCONNECT_COMMAND = "disconnect";
     private static final String LOGIN_COMMAND = "login";
     private static final String LOGOUT_COMMAND = "logout";
     private static final String ADD_FRIEND_COMMAND = "add-friend";
@@ -141,11 +141,10 @@ public class CommandExecutorTest {
     @Test
     public void testRegisterWithTakenUsername() {
         try {
-            String command = REGISTER_COMMAND;
             String username = USERNAME_FIRST_USER;
             String password = PASSWORD_FIRST_USER;
-            writer.println(command + SPACE + username + SPACE + password + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = registerUser(username, password);
             String expecting = USERNAME + username + ALREADY_TAKEN_USERNAME + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -156,15 +155,11 @@ public class CommandExecutorTest {
     @Test
     public void testRegisterWhileLoggedIn() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = REGISTER_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String username = USERNAME_GABI;
             String password = PASSWORD_GABI;
-            writer.println(command + SPACE + username + SPACE + password + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = registerUser(username, password);
             String expecting = LOGGED_IN_ALREADY_AS + USERNAME_FIRST_USER + TO_REGISTER_OTHER + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -193,10 +188,7 @@ public class CommandExecutorTest {
     @Test
     public void testLogInWhileLoggedIn() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String command = LOGIN_COMMAND;
             String username = USERNAME_GABI;
             String password = PASSWORD_GABI;
@@ -255,10 +247,7 @@ public class CommandExecutorTest {
     @Test
     public void testLogoutWithInvalidArguments() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String command = LOGOUT_COMMAND;
             writer.println(command + SPACE + "username" + System.lineSeparator());
             String reply = reader.readLine() + System.lineSeparator();
@@ -285,10 +274,8 @@ public class CommandExecutorTest {
     @Test
     public void testAddFriendWhileNotLoggedIn() {
         try {
-            String command = ADD_FRIEND_COMMAND;
             String user = USERNAME_GABI;
-            writer.println(command + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            String reply = addFriend(user);
             String expecting = NOT_LOGGED_IN + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -299,14 +286,10 @@ public class CommandExecutorTest {
     @Test
     public void testAddFriendWithNotRegisteredFriend() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
-            String command = ADD_FRIEND_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String user = WRONG_USERNAME;
-            writer.println(command + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = addFriend(user);
             String expecting = NOT_REGISTERED_USER + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -317,14 +300,10 @@ public class CommandExecutorTest {
     @Test
     public void testAddFriendSuccessfully() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = ADD_FRIEND_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String user = USERNAME_SECOND_USER;
-            writer.println(command + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = addFriend(user);
             String expecting =
                     OPENING_BRACKET + USERNAME_SECOND_USER + SEPARATOR + FRIEND_ADDED + System.lineSeparator();
             assertEquals(expecting, reply);
@@ -336,13 +315,9 @@ public class CommandExecutorTest {
     @Test
     public void testAddFriendYourself() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = ADD_FRIEND_COMMAND;
-            writer.println(command + SPACE + USERNAME_FIRST_USER + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+
+            String reply = addFriend(USERNAME_FIRST_USER);
             String expecting = "You can't add yourself as friend." + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -354,18 +329,11 @@ public class CommandExecutorTest {
     public void testAddFriendTwice() {
         try {
             String user = "someone";
-            writer.println(
-                    REGISTER_COMMAND + SPACE + user + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = ADD_FRIEND_COMMAND;
-            writer.println(command + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(command + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            registerUser(user, user);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+            addFriend(user);
+
+            String reply = addFriend(user);
             String expecting = USER_ALREADY_FRIEND + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -389,12 +357,11 @@ public class CommandExecutorTest {
     @Test
     public void testCreateGroupWhileNotLoggedIn() {
         try {
-            String command = CREATE_GROUP_COMMAND;
             String groupName = GROUP_NAME;
             String user1 = USERNAME_FIRST_USER;
             String user2 = USERNAME_SECOND_USER;
-            writer.println(command + SPACE + groupName + SPACE + user1 + SPACE + user2 + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = createGroup(groupName, user1, user2);
             String expecting = NOT_LOGGED_IN + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -405,15 +372,10 @@ public class CommandExecutorTest {
     @Test
     public void testCreateGroupWithNotRegisteredFriend() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
-            String command = CREATE_GROUP_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String user = WRONG_USERNAME;
-            writer.println(command + SPACE + GROUP_NAME + SPACE + user + SPACE + USERNAME_SECOND_USER +
-                    System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = createGroup(GROUP_NAME, user, USERNAME_SECOND_USER);
             String expecting = NOT_REGISTERED_USER + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -424,18 +386,11 @@ public class CommandExecutorTest {
     @Test
     public void testCreateGroupWithNotFriends() {
         try {
-            writer.println(REGISTER_COMMAND + SPACE + USERNAME_GABI + SPACE + PASSWORD_GABI + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
+            registerUser(USERNAME_GABI, PASSWORD_GABI);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
 
-            String command = CREATE_GROUP_COMMAND;
             String user = USERNAME_GABI;
-            writer.println(command + SPACE + GROUP_NAME + SPACE + USERNAME_SECOND_USER + SPACE + user +
-                    System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            String reply = createGroup(GROUP_NAME, USERNAME_SECOND_USER, user);
             String expecting = SOMEONE + USER_NOT_FRIEND_SECOND + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -446,25 +401,13 @@ public class CommandExecutorTest {
     @Test
     public void testCreateGroupSuccessfully() {
         try {
-            writer.println(
-                    REGISTER_COMMAND + SPACE + USERNAME_GROUP1 + SPACE + PASSWORD_GROUP1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    REGISTER_COMMAND + SPACE + USERNAME_GROUP2 + SPACE + PASSWORD_GROUP2 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            writer.println(ADD_FRIEND_COMMAND + SPACE + USERNAME_GROUP1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(ADD_FRIEND_COMMAND + SPACE + USERNAME_GROUP2 + System.lineSeparator());
-            reader.readLine();
+            registerUser(USERNAME_GROUP1, PASSWORD_GROUP1);
+            registerUser(USERNAME_GROUP2, PASSWORD_GROUP2);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+            addFriend(USERNAME_GROUP1);
+            addFriend(USERNAME_GROUP2);
 
-            String command = CREATE_GROUP_COMMAND;
-            writer.println(command + SPACE + GROUP_NAME + SPACE + USERNAME_GROUP1 + SPACE + USERNAME_GROUP2 +
-                    System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            String reply = createGroup(GROUP_NAME, USERNAME_GROUP1, USERNAME_GROUP2);
             String expecting = GROUP + GROUP_NAME + CREATED_SUCCESSFULLY + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -475,19 +418,11 @@ public class CommandExecutorTest {
     @Test
     public void testCreateGroupAddingYou() {
         try {
-            writer.println(
-                    REGISTER_COMMAND + SPACE + USERNAME_GROUP1 + SPACE + PASSWORD_GROUP1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = CREATE_GROUP_COMMAND;
-            writer.println(
-                    command + SPACE + GROUP_NAME + SPACE + USERNAME_FIRST_USER + SPACE + USERNAME_GROUP1 + SPACE +
-                            System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
-            String expecting = "You don't need to add you in the list of friends" + System.lineSeparator();
+            registerUser(USERNAME_GROUP1, PASSWORD_GROUP1);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+
+            String reply = createGroup(GROUP_NAME, USERNAME_FIRST_USER, USERNAME_GROUP1);
+            String expecting = ADDING_YOURSELF_GROUP + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -497,28 +432,14 @@ public class CommandExecutorTest {
     @Test
     public void testCreateGroupWithExistingGroup() {
         try {
-            writer.println(
-                    REGISTER_COMMAND + SPACE + USERNAME_GROUP1 + SPACE + PASSWORD_GROUP1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    REGISTER_COMMAND + SPACE + USERNAME_GROUP2 + SPACE + PASSWORD_GROUP2 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            writer.println(ADD_FRIEND_COMMAND + SPACE + USERNAME_GROUP1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(ADD_FRIEND_COMMAND + SPACE + USERNAME_GROUP2 + System.lineSeparator());
-            reader.readLine();
+            registerUser(USERNAME_GROUP1, PASSWORD_GROUP1);
+            registerUser(USERNAME_GROUP2, PASSWORD_GROUP2);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+            addFriend(USERNAME_GROUP1);
+            addFriend(USERNAME_GROUP2);
+            createGroup("group", USERNAME_GROUP1, USERNAME_GROUP2);
 
-            String command = CREATE_GROUP_COMMAND;
-            writer.println(command + SPACE + "group" + SPACE + USERNAME_GROUP1 + SPACE + USERNAME_GROUP2 +
-                    System.lineSeparator());
-            reader.readLine();
-            writer.println(command + SPACE + "group" + SPACE + USERNAME_GROUP1 + SPACE + USERNAME_GROUP2 +
-                    System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            String reply = createGroup("group", USERNAME_GROUP1, USERNAME_GROUP2);
             String expecting = GROUP_EXISTS + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -542,12 +463,9 @@ public class CommandExecutorTest {
     @Test
     public void testSplitWhileNotLoggedIn() {
         try {
-            String command = SPLIT_COMMAND;
             String user1 = USERNAME_FIRST_USER;
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + user1 + SPACE + description + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = split(10.0, user1);
             String expecting = NOT_LOGGED_IN + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -558,17 +476,10 @@ public class CommandExecutorTest {
     @Test
     public void testSplitWithNotRegisteredFriend() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
-            String command = SPLIT_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String user = WRONG_USERNAME;
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + user + SPACE + description +
-                    System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = split(10.0, user);
             String expecting = NOT_REGISTERED_USER + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -579,18 +490,11 @@ public class CommandExecutorTest {
     @Test
     public void testSplitWithNotAddedFriend() {
         try {
-            writer.println(REGISTER_COMMAND + SPACE + "NoFriend" + SPACE + "NoFriend" + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = SPLIT_COMMAND;
+            registerUser("NoFriend", "NoFriend");
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String user = "NoFriend";
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + user + SPACE + description + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = split(10.0, user);
             String expecting = USER_NOT_FRIEND_FIRST + "NoFriend" + USER_NOT_FRIEND_SECOND + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -602,21 +506,12 @@ public class CommandExecutorTest {
     public void testSplitSuccessfully() {
         try {
             String user = "Friend";
-            writer.println(REGISTER_COMMAND + SPACE + user + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            writer.println(
-                    ADD_FRIEND_COMMAND + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            String command = SPLIT_COMMAND;
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + user + SPACE + description + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
-            String expecting = SPLITTED + amount + BETWEEN_YOU + user + System.lineSeparator();
+            registerUser(user, user);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+            addFriend(user);
+
+            String reply = split(10.0, user);
+            String expecting = SPLIT + 10.0 + BETWEEN_YOU + user + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -636,15 +531,18 @@ public class CommandExecutorTest {
         }
     }
 
+    private String splitGroup(Double amount, String groupName) throws IOException {
+        writer.println(SPLIT_GROUP_COMMAND + SPACE + amount + SPACE + groupName + SPACE + DESCRIPTION +
+                System.lineSeparator());
+        return reader.readLine() + System.lineSeparator();
+    }
+
     @Test
     public void testSplitGroupWhileNotLoggedIn() {
         try {
-            String command = SPLIT_GROUP_COMMAND;
             String groupName = "groupp";
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + groupName + SPACE + description + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = splitGroup(10.0, groupName);
             String expecting = NOT_LOGGED_IN + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -655,16 +553,10 @@ public class CommandExecutorTest {
     @Test
     public void testSplitGroupWithNoSuchGroup() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
-            String command = SPLIT_GROUP_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String groupName = "groupp";
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + groupName + SPACE + description + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = splitGroup(10.0, groupName);
             String expecting = NO_SUCH_GROUP + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -677,31 +569,16 @@ public class CommandExecutorTest {
         try {
             String user1 = "friendo";
             String user2 = "friendo2";
-            writer.println(REGISTER_COMMAND + SPACE + user1 + SPACE + user1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(REGISTER_COMMAND + SPACE + user2 + SPACE + user2 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
-            writer.println(
-                    ADD_FRIEND_COMMAND + SPACE + user1 + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    ADD_FRIEND_COMMAND + SPACE + user2 + System.lineSeparator());
-            reader.readLine();
+            registerUser(user1, user1);
+            registerUser(user2, user2);
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
+            addFriend(user1);
+            addFriend(user2);
             String groupName = "grouppy";
-            writer.println(CREATE_GROUP_COMMAND + SPACE + groupName + SPACE + user1 + SPACE + user2 +
-                    System.lineSeparator());
-            reader.readLine();
-            String command = SPLIT_GROUP_COMMAND;
+            createGroup(groupName, user1, user2);
 
-            Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(command + SPACE + amount + SPACE + groupName + SPACE + description + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
-            String expecting = SPLITTED + amount + BETWEEN_YOU + GROUP_MEMBERS + groupName + System.lineSeparator();
+            String reply = splitGroup(10.0, groupName);
+            String expecting = SPLIT + 10.0 + BETWEEN_YOU + GROUP_MEMBERS + groupName + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -724,11 +601,9 @@ public class CommandExecutorTest {
     @Test
     public void testPayedWhileNotLoggedIn() {
         try {
-            String command = ADD_PAYMENT_COMMAND;
             String user1 = USERNAME_FIRST_USER;
-            Double amount = 10.0;
-            writer.println(command + SPACE + amount + SPACE + user1 + SPACE + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = payed(10.0, user1);
             String expecting = NOT_LOGGED_IN + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -739,15 +614,10 @@ public class CommandExecutorTest {
     @Test
     public void testPayedWithNotRegisteredFriend() {
         try {
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER);
-            reader.readLine();
-            reader.readLine();
-            String command = ADD_PAYMENT_COMMAND;
+            loginUser(USERNAME_FIRST_USER, PASSWORD_FIRST_USER);
             String user = WRONG_USERNAME;
-            Double amount = 10.0;
-            writer.println(command + SPACE + amount + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = payed(10.0, user);
             String expecting = NOT_REGISTERED_USER + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -759,16 +629,10 @@ public class CommandExecutorTest {
     public void testPayedWithNotAddedFriend() {
         try {
             String user = "NoFriendo";
-            writer.println(REGISTER_COMMAND + SPACE + user + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + USERNAME_FIRST_USER + SPACE + PASSWORD_FIRST_USER + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            String command = ADD_PAYMENT_COMMAND;
-            Double amount = 10.0;
-            writer.println(command + SPACE + amount + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            registerUser(user, user);
+            loginUser(user, user);
+
+            String reply = payed(10.0, user);
             String expecting = USER_NOT_FRIEND_FIRST + user + USER_NOT_FRIEND_SECOND + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -781,27 +645,15 @@ public class CommandExecutorTest {
         try {
             String user = "Ffrriend";
             String username = "gga";
-
-            writer.println(REGISTER_COMMAND + SPACE + user + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(REGISTER_COMMAND + SPACE + username + SPACE + username + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + username + SPACE + username + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            writer.println(
-                    ADD_FRIEND_COMMAND + SPACE + user + System.lineSeparator());
-            reader.readLine();
+            registerUser(user, user);
+            registerUser(username, username);
+            loginUser(username, username);
+            addFriend(user);
             Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(
-                    SPLIT_COMMAND + SPACE + amount + SPACE + user + SPACE + description + System.lineSeparator());
-            reader.readLine();
-            String command = ADD_PAYMENT_COMMAND;
+            split(amount, user);
             amount = amount + 10.0;
-            writer.println(command + SPACE + amount + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = payed(amount, user);
             String expecting = "[ " + user + " doesn't owe you so much money ]" + System.lineSeparator();
             assertEquals(expecting, reply);
             writer.println(LOGOUT_COMMAND + System.lineSeparator());
@@ -816,22 +668,12 @@ public class CommandExecutorTest {
         try {
             String user = "Frriend";
             String username = "gg";
+            registerUser(user, user);
+            registerUser(username, username);
+            loginUser(username, username);
+            addFriend(user);
 
-            writer.println(REGISTER_COMMAND + SPACE + user + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(REGISTER_COMMAND + SPACE + username + SPACE + username + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + username + SPACE + username + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            writer.println(
-                    ADD_FRIEND_COMMAND + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            String command = ADD_PAYMENT_COMMAND;
-            Double amount = 10.0;
-            writer.println(command + SPACE + amount + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+            String reply = payed(10.0, user);
             String expecting = "[ " + user + " doesn't owe you money ]" + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {
@@ -839,32 +681,54 @@ public class CommandExecutorTest {
         }
     }
 
+    private String registerUser(String username, String password) throws IOException {
+        writer.println(REGISTER_COMMAND + SPACE + username + SPACE + password + System.lineSeparator());
+        return reader.readLine() + System.lineSeparator();
+    }
+
+    private void loginUser(String username, String password) throws IOException {
+        writer.println(
+                LOGIN_COMMAND + SPACE + username + SPACE + password + System.lineSeparator());
+        reader.readLine();
+        reader.readLine();
+    }
+
+    private String addFriend(String username) throws IOException {
+        writer.println(
+                ADD_FRIEND_COMMAND + SPACE + username + System.lineSeparator());
+        return reader.readLine() + System.lineSeparator();
+    }
+
+    private String createGroup(String groupName, String username1, String username2) throws IOException {
+        writer.println(CREATE_GROUP_COMMAND + SPACE + groupName + SPACE + username1 + SPACE + username2 +
+                System.lineSeparator());
+        return reader.readLine() + System.lineSeparator();
+    }
+
+    private String payed(Double amount, String username) throws IOException {
+        writer.println(ADD_PAYMENT_COMMAND + SPACE + amount + SPACE + username + SPACE + System.lineSeparator());
+        return reader.readLine() + System.lineSeparator();
+    }
+
+    private String split(Double amount, String user) throws IOException {
+        writer.println(SPLIT_COMMAND + SPACE + amount + SPACE + user + SPACE + DESCRIPTION + System.lineSeparator());
+        return reader.readLine() + System.lineSeparator();
+    }
+
     @Test
     public void testPayedFriendSuccessfully() {
         try {
             String user = "Ffrriend";
             String username = "gga";
-
-            writer.println(REGISTER_COMMAND + SPACE + user + SPACE + user + System.lineSeparator());
-            reader.readLine();
-            writer.println(REGISTER_COMMAND + SPACE + username + SPACE + username + System.lineSeparator());
-            reader.readLine();
-            writer.println(
-                    LOGIN_COMMAND + SPACE + username + SPACE + username + System.lineSeparator());
-            reader.readLine();
-            reader.readLine();
-            writer.println(
-                    ADD_FRIEND_COMMAND + SPACE + user + System.lineSeparator());
-            reader.readLine();
+            registerUser(user, user);
+            registerUser(username, username);
+            loginUser(username, username);
+            addFriend(user);
             Double amount = 10.0;
-            String description = DESCRIPTION;
-            writer.println(
-                    SPLIT_COMMAND + SPACE + amount + SPACE + user + SPACE + description + System.lineSeparator());
-            reader.readLine();
-            String command = ADD_PAYMENT_COMMAND;
+            split(amount, user);
             amount = (amount / 2);
-            writer.println(command + SPACE + amount + SPACE + user + System.lineSeparator());
-            String reply = reader.readLine() + System.lineSeparator();
+
+            String reply = payed(amount, user);
             String expecting = "[ " + user + " payed you " + amount + " ]" + System.lineSeparator();
             assertEquals(expecting, reply);
         } catch (IOException e) {

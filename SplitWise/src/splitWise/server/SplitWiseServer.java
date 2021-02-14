@@ -28,7 +28,7 @@ public class SplitWiseServer {
     private static final String SERVER_HOST = "localhost";
 
     public static final int SERVER_PORT = 7777;
-    private static final int BUFFER_SIZE = 2048;
+    private static final int BUFFER_SIZE = 4096;
     private static final int ZERO = 0;
 
     private ByteBuffer buffer;

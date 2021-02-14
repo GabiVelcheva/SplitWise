@@ -1,13 +1,18 @@
 package splitWise.server.command;
 
+import static splitWise.server.command.CommandConstants.ADDING_YOURSELF;
+import static splitWise.server.command.CommandConstants.ADDING_YOURSELF_GROUP;
 import static splitWise.server.command.CommandConstants.ADD_FRIEND_COMMAND;
 import static splitWise.server.command.CommandConstants.ADD_PAYMENT_COMMAND;
 import static splitWise.server.command.CommandConstants.ALREADY_TAKEN_USERNAME;
+import static splitWise.server.command.CommandConstants.APPROVED;
 import static splitWise.server.command.CommandConstants.BETWEEN_YOU;
 import static splitWise.server.command.CommandConstants.CREATED_SUCCESSFULLY;
 import static splitWise.server.command.CommandConstants.CREATE_GROUP_COMMAND;
 import static splitWise.server.command.CommandConstants.DISCONNECTED;
 import static splitWise.server.command.CommandConstants.DISCONNECT_COMMAND;
+import static splitWise.server.command.CommandConstants.DOESNT_OWE_YOU;
+import static splitWise.server.command.CommandConstants.DOESNT_OWE_YOU_SO_MUCH;
 import static splitWise.server.command.CommandConstants.FRIENDS;
 import static splitWise.server.command.CommandConstants.FRIEND_ADDED;
 import static splitWise.server.command.CommandConstants.FRIEND_TOTALS_COMMAND;
@@ -23,16 +28,18 @@ import static splitWise.server.command.CommandConstants.INVALID_USERNAME_PASSWOR
 import static splitWise.server.command.CommandConstants.LOGGED_IN_ALREADY_AS;
 import static splitWise.server.command.CommandConstants.LOGIN_COMMAND;
 import static splitWise.server.command.CommandConstants.LOGOUT_COMMAND;
+import static splitWise.server.command.CommandConstants.NO_STATUS;
 import static splitWise.server.command.CommandConstants.NO_SUCH_GROUP;
 import static splitWise.server.command.CommandConstants.NOT_LOGGED_IN;
 import static splitWise.server.command.CommandConstants.NOT_REGISTERED_USER;
 import static splitWise.server.command.CommandConstants.OK;
 import static splitWise.server.command.CommandConstants.OPENING_BRACKET;
 import static splitWise.server.command.CommandConstants.OWES_YOU;
+import static splitWise.server.command.CommandConstants.PAYED_YOU;
 import static splitWise.server.command.CommandConstants.REGISTER_COMMAND;
 import static splitWise.server.command.CommandConstants.SEPARATOR;
 import static splitWise.server.command.CommandConstants.SOMEONE;
-import static splitWise.server.command.CommandConstants.SPLITTED;
+import static splitWise.server.command.CommandConstants.SPLIT;
 import static splitWise.server.command.CommandConstants.SPLIT_COMMAND;
 import static splitWise.server.command.CommandConstants.SPLIT_GROUP_ARGUMENTS;
 import static splitWise.server.command.CommandConstants.SPLIT_GROUP_COMMAND;
@@ -51,6 +58,7 @@ import static splitWise.server.command.CommandConstants.YOU_OWE;
 
 import splitWise.server.expenses.Expenses;
 import splitWise.server.expenses.Split;
+import splitWise.server.files.CommandManualFileHandler;
 import splitWise.server.files.HistoryFileHandler;
 import splitWise.server.files.RegisteredUsersFileHandler;
 import splitWise.server.user.Friend;
@@ -75,70 +83,12 @@ public class CommandExecutor {
     private Map<String, User> registeredUsers;
     private Map<String, SocketChannel> activeUsersByUsernames;
     private Set<SocketChannel> connectedClients;
-    private static final String[] COMMANDS_MANUAL = {"register <username> <password>",
-            "This command is used for registering a new user.", System.lineSeparator(), "login <username> <password>",
-            "This command is used for logging in.", System.lineSeparator(), "add-friend <username>",
-            "This command is used for adding user with name username to the friend list. The user should be " +
-                    "registered.",
-            System.lineSeparator(),
-            "create-group <group_name> <username> <username> ... <username>",
-            "This command is used for creating a group with name <group_name> and members <username> ... <username>.",
-            "The members of the group should be at least 3, otherwise the group will not be created.",
-            "The creator of " +
-                    "the group is added implicit in the group members, you don't need to parse your name as an " +
-                    "argument",
-            "All of the users must be registered and must be in your friend list.", System.lineSeparator(),
-            "split <amount> <username> <reason>",
-            "This command is used for splitting money with user with name username.",
-            "If the current user owes money to the other user, as much as possible",
-            "balances are updated before adding a new split. The other user should be a friend",
-            "with the current user.", System.lineSeparator(),
-            "split-group <amount> <group_name> <reason>",
-            "This command is used for splitting money with all of the members in the group with name group_name. The " +
-                    "money are divided equally",
-            "among the members. If the current user owes money to one of the other users, as much as possible",
-            "balances are updated before adding a new split.", System.lineSeparator(),
-            "payed <amount> <username> [<group_name>]",
-            "This command is used for adding payment from a user with name username.",
-            "The group_name argument is optional. If it is present, balances in the group are updated,",
-            "otherwise splits splitted as friends are updated.", System.lineSeparator(), "get-status",
-            "This command is used for printing the current status of the user.",
-            System.lineSeparator(), "history",
-            "This command is used for printing the history of all payments that the user has made.",
-            System.lineSeparator(), "logout", "This command is used for logging out.", System.lineSeparator(),
-            "help", "Displays a manual of all supported commands.", System.lineSeparator()};
 
     public CommandExecutor() {
         this.registeredUsers = new HashMap<>();
         this.activeUsersByUsernames = new HashMap<>();
         this.connectedClients = new HashSet<>();
     }
-
-    public void addToConnected(SocketChannel socketChannel) {
-        connectedClients.add(socketChannel);
-    }
-
-
-    public boolean hasUser(String user) {
-        return registeredUsers.containsKey(user);
-    }
-
-    public void loadRegisteredUsers() {
-        registeredUsers = RegisteredUsersFileHandler.loadRegisteredUsers();
-    }
-
-    private boolean isActive(SocketChannel socketChannel) {
-        return activeUsersByUsernames.containsValue(socketChannel);
-    }
-
-    private boolean isRegistered(String username) {
-        return registeredUsers.containsKey(username);
-    }
-
-    private boolean isPasswordCorrect(String username, String password) {
-        return registeredUsers.get(username).getPassword().equals(password);
-    }
-
 
     public String execute(Command cmd, SocketChannel socketChannel) {
         String[] message = cmd.message();
@@ -163,6 +113,40 @@ public class CommandExecutor {
             case DISCONNECT_COMMAND -> disconnect(socketChannel);
             default -> UNKNOWN_COMMAND + System.lineSeparator();
         };
+    }
+
+    public void addToConnected(SocketChannel socketChannel) {
+        connectedClients.add(socketChannel);
+    }
+
+
+    public boolean hasUser(String user) {
+        return registeredUsers.containsKey(user);
+    }
+
+    public void loadRegisteredUsers() {
+        registeredUsers = RegisteredUsersFileHandler.loadRegisteredUsers();
+    }
+
+    public void saveToFile() {
+        RegisteredUsersFileHandler.saveRegisteredUsersToFile(registeredUsers);
+    }
+
+    public String disconnect(SocketChannel socketChannel) {
+        if (isActive(socketChannel)) {
+            activeUsersByUsernames.remove(getKeyByValue(activeUsersByUsernames, socketChannel));
+        }
+        connectedClients.remove(socketChannel);
+        return DISCONNECTED + System.lineSeparator();
+    }
+
+    public void disconnectEveryone() {
+        for (SocketChannel socketChannel : connectedClients) {
+            if (activeUsersByUsernames.containsValue(socketChannel)) {
+                activeUsersByUsernames.remove(getKeyByValue(activeUsersByUsernames, socketChannel));
+            }
+            connectedClients.remove(socketChannel);
+        }
     }
 
     private String register(String username, String password, SocketChannel socketChannel) {
@@ -217,7 +201,7 @@ public class CommandExecutor {
                 return NOT_REGISTERED_USER + System.lineSeparator();
             } else {
                 if (friendName.equals(user.getUsername())) {
-                    return "You can't add yourself as friend." + System.lineSeparator();
+                    return ADDING_YOURSELF + System.lineSeparator();
                 }
                 if (user.getFriends() != null && user.hasFriend(friendName)) {
                     return USER_ALREADY_FRIEND + System.lineSeparator();
@@ -287,7 +271,7 @@ public class CommandExecutor {
             User userCreator = registeredUsers.get(getKeyByValue(activeUsersByUsernames, socketChannel));
             Set<String> listFriendsName = Arrays.stream(message).skip(2).collect(Collectors.toSet());
             if (isCreatorInTheList(userCreator.getUsername(), listFriendsName)) {
-                return "You don't need to add you in the list of friends" + System.lineSeparator();
+                return ADDING_YOURSELF_GROUP + System.lineSeparator();
             }
             if (!usersAreRegistered(listFriendsName)) {
                 return NOT_REGISTERED_USER + System.lineSeparator();
@@ -366,7 +350,7 @@ public class CommandExecutor {
                 updateBalance(paidBy, amount, splits, description, friendGroup);
             }
         }
-        return SPLITTED + amount + BETWEEN_YOU + friendName + System.lineSeparator();
+        return SPLIT + amount + BETWEEN_YOU + friendName + System.lineSeparator();
     }
 
 
@@ -393,7 +377,7 @@ public class CommandExecutor {
             }
         }
         updateBalance(paidBy, amount, splits, description, group);
-        return SPLITTED + amount + BETWEEN_YOU + GROUP_MEMBERS + groupName + System.lineSeparator();
+        return SPLIT + amount + BETWEEN_YOU + GROUP_MEMBERS + groupName + System.lineSeparator();
     }
 
     private List<String> getStatusFriends(User user, List<String> response) {
@@ -458,7 +442,7 @@ public class CommandExecutor {
         response = getStatusFriends(user, response);
         response = getStatusGroups(user, response);
         if(response.isEmpty()) {
-            return "No status to show" + System.lineSeparator();
+            return NO_STATUS + System.lineSeparator();
         }
         return response.stream().collect(Collectors.joining(System.lineSeparator()));
     }
@@ -486,23 +470,23 @@ public class CommandExecutor {
     private String addPayment(String userName, Double amount, String friendName, Group group) {
         Map<String, Double> balances = group.getDebts().get(userName);
         if (!balances.containsKey(friendName)) {
-            return "[ " + friendName + " doesn't owe you money ]" + System.lineSeparator();
+            return "[ " + friendName + DOESNT_OWE_YOU + System.lineSeparator();
         }
         Double debtFriend = balances.get(friendName);
         if (debtFriend < 0) {
-            return "[ " + friendName + " doesn't owe you money ]" + System.lineSeparator();
+            return "[ " + friendName + DOESNT_OWE_YOU + System.lineSeparator();
         } else {
             if (debtFriend - amount < 0) {
-                return "[ " + friendName + " doesn't owe you so much money ]" + System.lineSeparator();
+                return "[ " + friendName + DOESNT_OWE_YOU_SO_MUCH + System.lineSeparator();
             }
             User friend = registeredUsers.get(friendName);
-            friend.addNotification(userName + "  approved your payment " + amount);
+            friend.addNotification(userName + APPROVED + amount);
             addPaymentToHistoryFile(friend, userName, amount);
             balances.put(friendName, debtFriend - amount);
 
             balances = group.getDebts().get(friendName);
             balances.put(userName, balances.get(userName) + amount);
-            return "[ " + friendName + " payed you " + amount + " ]" + System.lineSeparator();
+            return "[ " + friendName + PAYED_YOU + amount + " ]" + System.lineSeparator();
         }
     }
 
@@ -572,12 +556,15 @@ public class CommandExecutor {
     }
 
     private String history(SocketChannel socketChannel) {
+        if(!isActive(socketChannel)) {
+            return NOT_LOGGED_IN + System.lineSeparator();
+        }
         User user = registeredUsers.get(getKeyByValue(activeUsersByUsernames, socketChannel));
         return HistoryFileHandler.loadHistoryOfPayments(user);
     }
 
     private String help() {
-        return Arrays.stream(COMMANDS_MANUAL).collect(Collectors.joining(System.lineSeparator()));
+        return CommandManualFileHandler.loadCommandManual();
     }
 
     private <K, V> K getKeyByValue(Map<K, V> map, V value) {
@@ -589,24 +576,16 @@ public class CommandExecutor {
         return null;
     }
 
-    public void saveToFile() {
-        RegisteredUsersFileHandler.saveRegisteredUsersToFile(registeredUsers);
+
+    private boolean isActive(SocketChannel socketChannel) {
+        return activeUsersByUsernames.containsValue(socketChannel);
     }
 
-    public String disconnect(SocketChannel socketChannel) {
-        if (activeUsersByUsernames.containsValue(socketChannel)) {
-            activeUsersByUsernames.remove(getKeyByValue(activeUsersByUsernames, socketChannel));
-        }
-        connectedClients.remove(socketChannel);
-        return DISCONNECTED + System.lineSeparator();
+    private boolean isRegistered(String username) {
+        return registeredUsers.containsKey(username);
     }
 
-    public void disconnectEveryone() {
-        for (SocketChannel socketChannel : connectedClients) {
-            if (activeUsersByUsernames.containsValue(socketChannel)) {
-                activeUsersByUsernames.remove(getKeyByValue(activeUsersByUsernames, socketChannel));
-            }
-            connectedClients.remove(socketChannel);
-        }
+    private boolean isPasswordCorrect(String username, String password) {
+        return registeredUsers.get(username).getPassword().equals(password);
     }
 }

@@ -1,0 +1,53 @@
+register <username> <password>
+This command is used for registering a new user.
+
+login <username> <password>
+This command is used for logging in.
+
+add-friend <username>
+This command is used for adding user with name username to the friend list. The user should be 
+registered.
+
+create-group <group_name> <username> <username> ... <username>
+This command is used for creating a group with name <group_name> and members <username> ... <username>.
+The members of the group should be at least 3, otherwise the group will not be created.
+The creator of the group is added implicit in the group members, 
+you don't need to parse your name as an argument,
+All of the users must be registered and must be in your friend list.
+
+split <amount> <username> <reason>
+This command is used for splitting money with user with name username.
+If the current user owes money to the other user, as much as possible
+balances are updated before adding a new split. The other user should be a friend
+with the current user.
+
+split-group <amount> <group_name> <reason>
+This command is used for splitting money with all of the members in the group with name group_name. The 
+money are divided equally
+among the members. If the current user owes money to one of the other users, as much as possible
+balances are updated before adding a new split.
+
+payed <amount> <username> [<group_name>]
+This command is used for adding payment from a user with name username.
+The group_name argument is optional. If it is present, balances in the group are updated,
+otherwise splits splitted as friends are updated.
+
+get-status
+This command is used for printing the current status of the user.
+
+friend-totals <username>
+This command is used for showing all the payements that are payed from you and your friend <username>
+It also shows how much of them are payed by you.
+
+group-totals <group_name>
+This command is used for showing all the payements that are payed from the group member og <group_name>
+It also shows how much of them are payed by you.
+
+history
+This command is used for printing all the payements, payed by the user.
+
+logout
+This command is used for logging out.
+
+help
+Displays a manual of all supported commands.
